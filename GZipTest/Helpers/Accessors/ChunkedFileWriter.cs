@@ -10,7 +10,7 @@ namespace GZipTest.Helpers.Accessors
     class ChunkedFileWriter : IDisposable
     {
         private readonly int chunkSize;
-        private readonly int chunksNumber;        
+        private readonly int chunksNumber;
 
         private readonly FileStream fileStream;
         private readonly HashSet<int> chunksGeted;
@@ -37,14 +37,12 @@ namespace GZipTest.Helpers.Accessors
             {
                 throw new ArgumentException(string.Format("Обнаружена копия блока №{0}!", chunk.Number));
             }
-            if (chunk.Data.Length != chunkSize)
+            if (chunk.Data.Length > chunkSize)
             {
-                throw new ArgumentException(string.Format("Размер блока №{0} отличен от ожидаемого!", chunk.Number));
+                throw new ArgumentException(string.Format("Размер блока №{0} больше ожидаемого!", chunk.Number));
             }
-
-            Console.WriteLine(chunk.Number);
-
-            long position = chunk.Number * chunkSize;
+            
+            long position = (long)chunk.Number * chunkSize;
             fileStream.Seek(position, SeekOrigin.Begin);
             fileStream.Write(chunk.Data, 0, chunk.Data.Length);
         }

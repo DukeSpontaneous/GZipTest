@@ -13,7 +13,7 @@ namespace GZipTest.Helpers
 {
     class GZipHelper
     {
-        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024;
+        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024 * 100;
         private static readonly int CORS_COUNT = Environment.ProcessorCount;
 
         public static void ChunkedCompress(string form, string to, int chunkSize = DEFAULT_CHUNK_SIZE)
