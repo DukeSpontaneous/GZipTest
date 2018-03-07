@@ -45,6 +45,7 @@
     <Compile Include="Helpers\Accessors\ChunkedFileWriter.cs" />
     <Compile Include="Helpers\Accessors\FileChunk.cs" />
     <Compile Include="Helpers\GZipHelper.cs" />
+    <Compile Include="Helpers\Multithreading\MyThreadPool.cs" />
     <Compile Include="Messages.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -52,5 +53,6 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

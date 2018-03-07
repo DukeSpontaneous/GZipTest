@@ -10,6 +10,11 @@ namespace GZipTest.Helpers.Accessors
     class ChunkedFileWriter : IDisposable
     {
         private readonly int chunkSize;
+        public int СhunkSize
+        {
+            get => chunkSize;
+        }
+
         private readonly int chunksNumber;
 
         private readonly FileStream fileStream;
@@ -22,8 +27,10 @@ namespace GZipTest.Helpers.Accessors
             this.fileStream = fi.Open(FileMode.Create, FileAccess.Write);
             this.chunksGeted = new HashSet<int>();
 
-            this.chunkSize = chunkSize;
-            this.chunksNumber = chunksNumber;
+            this.chunkSize = (chunkSize > 0) ?
+                chunkSize : throw new ArgumentException("Размер сегмента архива должен быть целым положительным числом.");
+            this.chunksNumber = (chunksNumber > 0) ?
+                chunksNumber : throw new ArgumentException("Число сегментов архива должно быть целым положительным числом.");
         }
 
         public void Dispose()
@@ -31,7 +38,7 @@ namespace GZipTest.Helpers.Accessors
             this.fileStream.Close();
         }
 
-        public void Feed(FileChunk chunk)
+        public void SynkFeed(FileChunk chunk)
         {
             if (chunksGeted.Add(chunk.Number) == false)
             {
@@ -41,10 +48,14 @@ namespace GZipTest.Helpers.Accessors
             {
                 throw new ArgumentException(string.Format("Размер блока №{0} больше ожидаемого!", chunk.Number));
             }
-            
+
             long position = (long)chunk.Number * chunkSize;
-            fileStream.Seek(position, SeekOrigin.Begin);
-            fileStream.Write(chunk.Data, 0, chunk.Data.Length);
+
+            lock (fileStream)
+            {
+                fileStream.Seek(position, SeekOrigin.Begin);
+                fileStream.Write(chunk.Data, 0, chunk.Data.Length);
+            }
         }
 
     }

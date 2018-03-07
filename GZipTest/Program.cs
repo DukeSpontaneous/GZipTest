@@ -37,10 +37,12 @@ namespace GZipTest
             switch (cmd)
             {
                 case "compress":
+                    Console.WriteLine(Messages.CMD_WAITING);
                     GZipHelper.ChunkedCompress(source, distination);
                     Console.WriteLine(Messages.CMD_SUCCESS);
                     break;
                 case "decompress":
+                    Console.WriteLine(Messages.CMD_WAITING);
                     GZipHelper.ChunkedDecompress(source, distination);
                     Console.WriteLine(Messages.CMD_SUCCESS);
                     break;

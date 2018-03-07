@@ -5,9 +5,9 @@ using System.Text;
 
 using System.IO;
 using System.IO.Compression;
-using System.Threading;
 
 using GZipTest.Helpers.Accessors;
+using GZipTest.Helpers.Multithreading;
 
 namespace GZipTest.Helpers
 {
@@ -18,7 +18,7 @@ namespace GZipTest.Helpers
 
         public static void ChunkedCompress(string form, string to, int chunkSize = DEFAULT_CHUNK_SIZE)
         {
-            FileInfo source = new FileInfo(form);
+            var source = new FileInfo(form);
             if (!source.Exists)
             {
                 throw new ArgumentException("Файл, подлежащий архивации, не обнаружен!");
@@ -32,42 +32,10 @@ namespace GZipTest.Helpers
 
             using (var chReader = new ChunkedFileReader(source, chunkSize))
             {
-                Thread[] threads = new Thread[CORS_COUNT];
-                for (int i = 0; i < threads.Length; ++i)
-                {
-                    threads[i] = new Thread(
-                        () =>
-                        {
-                            FileChunk chunk;
-                            while (true)
-                            {
-                                lock (chReader)
-                                {
-                                    chunk = chReader.NextChunk();
-                                }
-                                if (chunk == null)
-                                {
-                                    break;
-                                }
+                var threads = new MyThreadPool(ChunkedCompressHandler, CORS_COUNT);
+                var ptrs = new Tuple<ChunkedFileReader, string>(chReader, chunkNamePattern);
 
-                                var destination = new FileInfo(chunkNamePattern + chunk.Number);
-                                if (destination.Exists)
-                                {
-                                    throw new ArgumentException("Имя файла, необходимое сегменту архива, уже занято!");
-                                }
-                                using (var gzipOut = new GZipStream(destination.Open(FileMode.Create, FileAccess.Write), CompressionMode.Compress))
-                                {
-                                    gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
-                                }
-                            }
-                        });
-                    threads[i].Start();
-                }
-
-                foreach (var thread in threads)
-                {
-                    thread.Join();
-                }
+                threads.Execute(ptrs);
             }
         }
 
@@ -87,50 +55,72 @@ namespace GZipTest.Helpers
 
             using (var chWriter = new ChunkedFileWriter(destination, chunkSize, chunks.Count))
             {
-                Thread[] threads = new Thread[CORS_COUNT];
-                for (int i = 0; i < threads.Length; ++i)
-                {
-                    threads[i] = new Thread(
-                        () =>
-                        {
-                            while (true)
-                            {
-                                FileInfo chunk;
-                                lock (chunks)
-                                {
-                                    if (chunks.Count <= 0)
-                                    {
-                                        break;
-                                    }
-                                    chunk = chunks.Dequeue();
-                                }
+                var threads = new MyThreadPool(ChunkedDecompressHandler, CORS_COUNT);
+                var ptrs = new Tuple<Queue<FileInfo>, ChunkedFileWriter>(chunks, chWriter);
 
-                                byte[] chData;
-                                using (var br = new BinaryReader(new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
-                                {
-                                    chData = br.ReadBytes(chunkSize);
-                                }
-
-                                int chNumber = int.Parse(chunk.Extension.Remove(0, 1));
-                                lock (chWriter)
-                                {
-                                    chWriter.Feed(new FileChunk(chData, chNumber));
-                                }
-                            }
-
-                        });
-                    threads[i].Start();
-                }
-
-                foreach (var thread in threads)
-                {
-                    thread.Join();
-                }
+                threads.Execute(ptrs);
 
                 if (chWriter.IsReady == false)
                 {
                     throw new InvalidDataException("Не все найденные сегменты были обработаны!");
                 }
+            }
+        }
+
+        private static void ChunkedDecompressHandler(object obj)
+        {
+            var ptrs = (Tuple<Queue<FileInfo>, ChunkedFileWriter>)obj;
+
+            var chunks = ptrs.Item1;
+            var chWriter = ptrs.Item2;
+
+            int chunkSize = chWriter.СhunkSize;
+
+            while (true)
+            {
+                FileInfo chunk;
+                lock (chunks)
+                {
+                    if (chunks.Count <= 0)
+                    {
+                        break;
+                    }
+                    chunk = chunks.Dequeue();
+                }
+
+                byte[] chData;                
+                using (var br = new BinaryReader(new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
+                {
+                    chData = br.ReadBytes(chunkSize);
+                }
+
+                int chNumber = int.Parse(chunk.Extension.Remove(0, 1));
+                chWriter.SynkFeed(new FileChunk(chData, chNumber));
+            }
+        }
+
+        private static void ChunkedCompressHandler(object obj)
+        {
+            var ptrs = (Tuple<ChunkedFileReader, string>)obj;
+
+            var chReader = ptrs.Item1;
+            var chunkNamePattern = ptrs.Item2;
+
+            FileChunk chunk;
+            chunk = chReader.SyncNextChunk();
+            while (chunk != null)
+            {
+                var destination = new FileInfo(chunkNamePattern + chunk.Number);
+                if (destination.Exists)
+                {
+                    throw new ArgumentException("Имя файла, необходимое сегменту архива, уже занято!");
+                }
+                using (var gzipOut = new GZipStream(destination.Open(FileMode.Create, FileAccess.Write), CompressionMode.Compress))
+                {
+                    gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
+                }
+
+                chunk = chReader.SyncNextChunk();
             }
         }
 
