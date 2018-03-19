@@ -15,23 +15,19 @@ namespace GZipTest.Helpers
 {
     class GZipHelper
     {
-        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024;
+        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024 * 50;
         private static readonly int CORS_COUNT = Environment.ProcessorCount;
 
         public static void compressChunk(FileChunk chunk, ThreadWriter threadWriter)
         {
-            using (Stream dest = new MemoryStream())
+            using (var dest = new MemoryStream())
             using (var gzipOut = new GZipStream(dest, CompressionMode.Compress))
             {
                 gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
-                gzipOut.Flush();
-
-                byte[] bytes = new byte[dest.Length];
-                dest.Read(bytes, 0, bytes.Length);
 
                 threadWriter.Add(
                     new FileChunk(
-                        bytes,
+                        dest.ToArray(),
                         chunk.Number
                     )
                  );
@@ -137,13 +133,12 @@ namespace GZipTest.Helpers
                     }
                     chunk = chunks.Dequeue();
                 }
-
-                var ms = new MemoryStream();
-                using (var br = new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress))
+                
+                byte[] chData;
+                using (var br = new BinaryReader( new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
                 {
-                    br.CopyTo(ms);
+                    chData = br.ReadBytes(DEFAULT_CHUNK_SIZE);
                 }
-                byte[] chData = ms.ToArray();
 
                 int chNumber = int.Parse(chunk.Extension.Remove(0, 1));
                 chWriter.SynkFeed(new FileChunk(chData, chNumber));

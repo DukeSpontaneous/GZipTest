@@ -42,7 +42,7 @@ namespace GZipTest.Helpers.Multithreading
         {
             lock (tasks)
             {
-                if (tasks.Count < 4 /*Environment.ProcessorCount*/)
+                if (tasks.Count < Environment.ProcessorCount)
                 {
                     task.Start();
                     tasks.Add(task);
@@ -65,7 +65,7 @@ namespace GZipTest.Helpers.Multithreading
             {
                 lock (tasks)
                 {
-                    for (int i = tasks.Count - 1; i < 4 /*Environment.ProcessorCount*/ && queue.Count > 0; ++i)
+                    for (int i = tasks.Count - 1; i < Environment.ProcessorCount && queue.Count > 0; ++i)
                     {
                         var t = queue.Dequeue();
                         t.Start();
