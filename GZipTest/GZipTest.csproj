@@ -45,7 +45,9 @@
     <Compile Include="Helpers\Accessors\ChunkedFileWriter.cs" />
     <Compile Include="Helpers\Accessors\FileChunk.cs" />
     <Compile Include="Helpers\GZipHelper.cs" />
+    <Compile Include="Helpers\Multithreading\MyTaskManager.cs" />
     <Compile Include="Helpers\Multithreading\MyThreadPool.cs" />
+    <Compile Include="Helpers\Multithreading\ThreadWriter.cs" />
     <Compile Include="Messages.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

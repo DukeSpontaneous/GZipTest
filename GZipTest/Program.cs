@@ -11,9 +11,13 @@ namespace GZipTest
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Процессоров: {0}", Environment.ProcessorCount);
+
+            ProcessingCommand(args);
+
             try
             {
-                ProcessingCommand(args);
+                
             }
             catch (Exception ex)
             {

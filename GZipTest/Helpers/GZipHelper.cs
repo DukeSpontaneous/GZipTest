@@ -6,6 +6,8 @@ using System.Text;
 using System.IO;
 using System.IO.Compression;
 
+using System.Threading.Tasks;
+
 using GZipTest.Helpers.Accessors;
 using GZipTest.Helpers.Multithreading;
 
@@ -13,12 +15,52 @@ namespace GZipTest.Helpers
 {
     class GZipHelper
     {
-        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024 * 100;
+        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024;
         private static readonly int CORS_COUNT = Environment.ProcessorCount;
 
-        public static void ChunkedCompress(string form, string to, int chunkSize = DEFAULT_CHUNK_SIZE)
+        public static void compressChunk(FileChunk chunk, ThreadWriter threadWriter)
         {
-            var source = new FileInfo(form);
+            using (Stream dest = new MemoryStream())
+            using (var gzipOut = new GZipStream(dest, CompressionMode.Compress))
+            {
+                gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
+                gzipOut.Flush();
+
+                byte[] bytes = new byte[dest.Length];
+                dest.Read(bytes, 0, bytes.Length);
+
+                threadWriter.Add(
+                    new FileChunk(
+                        bytes,
+                        chunk.Number
+                    )
+                 );
+            }
+        }
+
+        public static void readFile(string name, MyTaskManager manager, ThreadWriter threadWriter)
+        {
+            var chr = new ChunkedFileReader(new FileInfo(name), DEFAULT_CHUNK_SIZE);
+
+            for (var chunk = chr.SyncNextChunk(); chunk != null; chunk = chr.SyncNextChunk())
+            {
+                var local = chunk;
+
+                manager.Add(new Task(
+                    () =>
+                    {
+                        compressChunk(local, threadWriter);
+                    }
+                ));
+            }
+
+        }
+
+        /**/
+
+        public static void ChunkedCompress(string from, string to, int chunkSize = DEFAULT_CHUNK_SIZE)
+        {
+            var source = new FileInfo(from);
             if (!source.Exists)
             {
                 throw new ArgumentException("Файл, подлежащий архивации, не обнаружен!");
@@ -28,15 +70,23 @@ namespace GZipTest.Helpers
                 throw new ArgumentException("Размер сегмента архива должен быть положительным числом!");
             }
 
-            string chunkNamePattern = to + ".";
+            MyTaskManager manager = new MyTaskManager();
 
-            using (var chReader = new ChunkedFileReader(source, chunkSize))
+            ThreadWriter writer = new ThreadWriter(to, () =>
             {
-                var threads = new MyThreadPool(ChunkedCompressHandler, CORS_COUNT);
-                var ptrs = new Tuple<ChunkedFileReader, string>(chReader, chunkNamePattern);
+                return !manager.IsCompleted;
+            });
 
-                threads.Execute(ptrs);
-            }
+            manager.Add(new Task(
+                () =>
+                {
+                    readFile(from, manager, writer);
+                }
+            ));
+
+            manager.Execute();
+
+            writer.Join();
         }
 
         public static void ChunkedDecompress(string form, string to, int chunkSize = DEFAULT_CHUNK_SIZE)
@@ -88,11 +138,12 @@ namespace GZipTest.Helpers
                     chunk = chunks.Dequeue();
                 }
 
-                byte[] chData;                
-                using (var br = new BinaryReader(new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
+                var ms = new MemoryStream();
+                using (var br = new GZipStream(chunk.Open(FileMode.Open, FileAccess.Read), CompressionMode.Decompress))
                 {
-                    chData = br.ReadBytes(chunkSize);
+                    br.CopyTo(ms);
                 }
+                byte[] chData = ms.ToArray();
 
                 int chNumber = int.Parse(chunk.Extension.Remove(0, 1));
                 chWriter.SynkFeed(new FileChunk(chData, chNumber));
