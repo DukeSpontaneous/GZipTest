@@ -15,26 +15,28 @@ namespace GZipTest.Helpers
 {
     class GZipHelper
     {
-        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024 * 50;
+        private const int DEFAULT_CHUNK_SIZE = 1024 * 1024;
         private static readonly int CORS_COUNT = Environment.ProcessorCount;
 
-        public static void compressChunk(FileChunk chunk, ThreadWriter threadWriter)
+        private static void compressChunk(FileChunk chunk, ThreadWriter threadWriter)
         {
             using (var dest = new MemoryStream())
-            using (var gzipOut = new GZipStream(dest, CompressionMode.Compress))
             {
-                gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
+                using (var gzipOut = new GZipStream(dest, CompressionMode.Compress))
+                {
+                    gzipOut.Write(chunk.Data, 0, chunk.Data.Length);
+                }
 
                 threadWriter.Add(
                     new FileChunk(
                         dest.ToArray(),
                         chunk.Number
                     )
-                 );
+                );
             }
         }
 
-        public static void readFile(string name, MyTaskManager manager, ThreadWriter threadWriter)
+        private static void readFile(string name, MyTaskManager manager, ThreadWriter threadWriter)
         {
             var chr = new ChunkedFileReader(new FileInfo(name), DEFAULT_CHUNK_SIZE);
 
