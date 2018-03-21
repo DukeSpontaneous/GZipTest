@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace GZipTest.Helpers.Multithreading
 {
-    class MyTaskManager : IDisposable
+    class AsyncTaskManager : IDisposable
     {
-        private Queue<Task> queue;
-        private List<Task> tasks = new List<Task>();
-        private CancellationTokenSource source = new CancellationTokenSource();
+        readonly Queue<Task> queue = new Queue<Task>();
+        readonly List<Task> tasks = new List<Task>();
+        CancellationTokenSource cancelSource = new CancellationTokenSource();
 
         public bool IsCompleted
         {
@@ -28,14 +28,9 @@ namespace GZipTest.Helpers.Multithreading
             }
         }
 
-        public MyTaskManager()
-        {
-            queue = new Queue<Task>();
-        }
-
         public void Dispose()
         {
-            source.Dispose();
+            cancelSource.Dispose();
         }
 
         public void Add(Task task)
@@ -47,9 +42,9 @@ namespace GZipTest.Helpers.Multithreading
                     task.Start();
                     tasks.Add(task);
 
-                    lock (source)
+                    lock (cancelSource)
                     {
-                        source.Cancel();
+                        cancelSource.Cancel();
                     }
                 }
                 else
@@ -59,7 +54,7 @@ namespace GZipTest.Helpers.Multithreading
             }
         }
 
-        public void Execute()
+        public void Run()
         {
             while (!this.IsCompleted)
             {
@@ -67,19 +62,19 @@ namespace GZipTest.Helpers.Multithreading
                 {
                     for (int i = tasks.Count - 1; i < Environment.ProcessorCount && queue.Count > 0; ++i)
                     {
-                        var t = queue.Dequeue();
-                        t.Start();
-                        tasks.Add(t);
+                        var task = queue.Dequeue();
+                        task.Start();
+                        tasks.Add(task);
                     }
                 }
 
-                CancellationToken token;
+                CancellationToken cancel;
 
                 do
                 {
-                    lock (source)
+                    lock (cancelSource)
                     {
-                        token = source.Token;
+                        cancel = cancelSource.Token;
                     }
 
                     Task[] list;
@@ -91,23 +86,23 @@ namespace GZipTest.Helpers.Multithreading
 
                     try
                     {
-                        Task.WaitAny(list, token);
+                        Task.WaitAny(list, cancel);
                     }
-                    catch (Exception e)
+                    catch (OperationCanceledException e)
                     {
+                        // Очередь заданий обновлена
+                    }                    
 
-                    }
-
-                    if (token.IsCancellationRequested)
+                    if (cancel.IsCancellationRequested)
                     {
-                        lock (source)
+                        lock (cancelSource)
                         {
-                            source.Dispose();
-                            source = new CancellationTokenSource();
+                            cancelSource.Dispose();
+                            cancelSource = new CancellationTokenSource();
                         }
                     }
                 }
-                while (token.IsCancellationRequested);
+                while (cancel.IsCancellationRequested);
 
                 lock (tasks)
                 {

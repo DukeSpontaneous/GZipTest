@@ -11,13 +11,9 @@ namespace GZipTest
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Процессоров: {0}", Environment.ProcessorCount);
-
-            ProcessingCommand(args);
-
             try
             {
-                
+                ProcessingCommand(args);
             }
             catch (Exception ex)
             {
@@ -42,12 +38,12 @@ namespace GZipTest
             {
                 case "compress":
                     Console.WriteLine(Messages.CMD_WAITING);
-                    GZipHelper.ChunkedCompress(source, distination);
+                    GZipHelper.ChunkedCompressCMD(source, distination);
                     Console.WriteLine(Messages.CMD_SUCCESS);
                     break;
                 case "decompress":
                     Console.WriteLine(Messages.CMD_WAITING);
-                    GZipHelper.ChunkedDecompress(source, distination);
+                    GZipHelper.ChunkedDecompressCMD(source, distination);
                     Console.WriteLine(Messages.CMD_SUCCESS);
                     break;
                 default:

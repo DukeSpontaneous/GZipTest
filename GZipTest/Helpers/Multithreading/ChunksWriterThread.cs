@@ -10,33 +10,23 @@ using GZipTest.Helpers.Accessors;
 
 namespace GZipTest.Helpers.Multithreading
 {
-    class ThreadWriter
+    class ChunksWriterThread 
     {
-        Thread thread;
-        Queue<FileChunk> chunks;
-        ManualResetEvent resetEvent;
-        Func<bool> action;
+        readonly Thread thread;
+        readonly Queue<FileChunk> chunks = new Queue<FileChunk>();
+        readonly ManualResetEvent resetEvent = new ManualResetEvent(false);
+        readonly Func<bool> stoppingСondition;
 
         readonly string name;
 
-        public ThreadWriter(string name, Func<bool> action)
+        public ChunksWriterThread(string name, Func<bool> stoppingСondition)
         {
-            chunks = new Queue<FileChunk>();
-            resetEvent = new ManualResetEvent(false);
             thread = new Thread(ThreadHandler);
-            this.action = action;
+
+            this.stoppingСondition = stoppingСondition;
             this.name = name;
 
             thread.Start();
-        }
-
-        public void Add(FileChunk chunk)
-        {
-            lock (chunks)
-            {
-                chunks.Enqueue(chunk);
-                resetEvent.Set();
-            }
         }
 
         public void Start()
@@ -49,7 +39,16 @@ namespace GZipTest.Helpers.Multithreading
             thread.Join();
         }
 
-        private int SyncGetQueueSize()
+        public void SyncAddChunk(FileChunk chunk)
+        {
+            lock (chunks)
+            {
+                chunks.Enqueue(chunk);
+                resetEvent.Set();
+            }
+        }
+
+        int SyncGetQueueSize()
         {
             int size;
             lock (chunks)
@@ -59,9 +58,9 @@ namespace GZipTest.Helpers.Multithreading
             return size;
         }
 
-        private void ThreadHandler()
+        void ThreadHandler()
         {
-            while (action() )
+            while (stoppingСondition())
             {
                 resetEvent.WaitOne();
 
@@ -72,12 +71,13 @@ namespace GZipTest.Helpers.Multithreading
                     {
                         chunk = chunks.Dequeue();
 
-                        if (chunks.Count == 0) {
+                        if (chunks.Count == 0)
+                        {
                             resetEvent.Reset();
                         }
                     }
 
-                    string path = name + "." + chunk.Number;
+                    string path = String.Format("{0}.{1}", name, chunk.Number);
 
                     using (var outFile = new FileStream(path, FileMode.Create, FileAccess.Write))
                     {
