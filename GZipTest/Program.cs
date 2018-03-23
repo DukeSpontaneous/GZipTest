@@ -17,7 +17,7 @@ namespace GZipTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Ошибка: {0}", ex.Message);
+                Console.WriteLine("Ошибка на этапе подготовки ресурсов: {0}{1}", Environment.NewLine, ex.Message);
             }
         }
 
@@ -39,12 +39,10 @@ namespace GZipTest
                 case "compress":
                     Console.WriteLine(Messages.CMD_WAITING);
                     GZipHelper.ChunkedCompress(source, distination);
-                    Console.WriteLine(Messages.CMD_SUCCESS);
                     break;
                 case "decompress":
                     Console.WriteLine(Messages.CMD_WAITING);
                     GZipHelper.ChunkedDecompress(source, distination);
-                    Console.WriteLine(Messages.CMD_SUCCESS);
                     break;
                 default:
                     Console.WriteLine("Ошибка: запрошено выполнение нереализованной операции!");

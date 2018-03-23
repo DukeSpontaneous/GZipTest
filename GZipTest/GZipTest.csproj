@@ -44,8 +44,10 @@
     <Compile Include="Helpers\Accessors\ChunkedFileReader.cs" />
     <Compile Include="Helpers\Accessors\ChunkedFileWriter.cs" />
     <Compile Include="Helpers\Accessors\FileChunk.cs" />
+    <Compile Include="Helpers\GZipCompressConveyor.cs" />
+    <Compile Include="Helpers\GZipDecompressConveyor.cs" />
     <Compile Include="Helpers\GZipHelper.cs" />
-    <Compile Include="Helpers\Multithreading\MyThreadPool.cs" />
+    <Compile Include="Helpers\Multithreading\ProducerConsumer.cs" />
     <Compile Include="Messages.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

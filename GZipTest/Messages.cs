@@ -17,6 +17,5 @@ GZipTest.exe compress/decompress [имя исходного файла] [имя 
 ";
 
         public const string CMD_WAITING = @"Начата обработка данных...";
-        public const string CMD_SUCCESS = @"Команда успешно выполнена!";
     }
 }

@@ -9,14 +9,14 @@ namespace GZipTest.Helpers.Accessors
 {
     class ChunkedFileReader : IDisposable
     {
-        private int chunkSize;
+        readonly int chunkSize;
         public int СhunkSize
         {
             get => chunkSize;
         }
 
-        private readonly BinaryReader sourceFile;
-        private int currentChunk;
+        readonly BinaryReader sourceFile;
+        int currentChunk;
 
         public ChunkedFileReader(FileInfo fi, int chunkSize)
         {

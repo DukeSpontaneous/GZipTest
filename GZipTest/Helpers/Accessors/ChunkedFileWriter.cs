@@ -38,16 +38,12 @@ namespace GZipTest.Helpers.Accessors
             this.fileStream.Close();
         }
 
-        public void SynkFeed(FileChunk chunk)
+        public void SyncFeed(FileChunk chunk)
         {
             if (chunksGeted.Add(chunk.Number) == false)
-            {
                 throw new ArgumentException(string.Format("Обнаружена копия блока №{0}!", chunk.Number));
-            }
             if (chunk.Data.Length > chunkSize)
-            {
                 throw new ArgumentException(string.Format("Размер блока №{0} больше ожидаемого!", chunk.Number));
-            }
 
             long position = (long)chunk.Number * chunkSize;
 
